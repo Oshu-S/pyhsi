@@ -15,15 +15,17 @@ from tkinter import filedialog
 
 
 def loadResults():
-
+    """
+    Load the results from a file and open the options menu.
+    """
     results = Results.open()
-    # results = Results.open('../simulations/results/simple_fe_mm.xlsx')
-    # results = Results.open('../simulations/results/crowd1_fe_mm.xlsx')
-
     results.options()
 
 
 class Results:
+    """
+    Class to represent and manipulate results from pedestrian-structure interaction simulations.
+    """
 
     abbr = {
         'Finite Element': 'fe',
@@ -34,7 +36,26 @@ class Results:
     }
 
     def __init__(self, t, displacement, velocity, acceleration, pedestrianModel=None, modelType=None, filename=None):
+        """
+        Initialize a Results instance with simulation results of pedestrian-structure interaction.
 
+        Parameters
+        ----------
+        t : numpy.ndarray
+            Array of time steps
+        displacement : numpy.ndarray
+            Array of displacements at each time step.
+        velocity :numpy.ndarray
+            Array of velocities at each time step.
+        acceleration : numpy.ndarray
+            Array of accelerations at each time step.
+        pedestrianModel : str, optional
+            Type of pedestrian model used in simulation. Defaults to None.
+        modelType : str, optional
+            Type of model used in simulation. Defaults to None.
+        filename : str, optional
+            Name of the file where simulation results are saved. Defaults to None.
+        """
         self.t = t
         self.displacement = displacement
         self.velocity = velocity
@@ -48,9 +69,19 @@ class Results:
         self._midspanRMS = None
         self._maxMidspanRMS = None
 
+        # TODO: POI Acceleration
+
     # region Properties
     @property
     def midspanAcceleration(self):
+        """
+        Get the acceleration at the midspan of the structure.
+
+        Returns
+        -------
+        midspanAcceleration: numpy.ndarray
+            Array of acceleration at the midspan of the structure.
+        """
         if self._midspanAcceleration is None:
             midspanX = self.acceleration.shape[1] // 2 - 1
             self._midspanAcceleration = self.acceleration[:, midspanX]
@@ -58,6 +89,14 @@ class Results:
 
     @property
     def midspanRMS(self):
+        """
+        Calculate the Root Mean Square (RMS) of the acceleration at the midspan of the structure.
+
+        Returns
+        -------
+        midspanRMS: numpy.float64
+            RMS of the acceleration at the midspan of the structure.
+        """
         if self._midspanRMS is None:
             midspanX = self.acceleration.shape[1] // 2 - 1
             self._midspanRMS = self.calculateRMS(midspanX)
@@ -65,6 +104,13 @@ class Results:
 
     @property
     def maxMidspanRMS(self):
+        """
+        Get the maximum RMS of the acceleration at the midspan of the structure.
+
+        Returns:
+        maxMidspanRMS: numpy.float64
+            Maximum RMS of the acceleration at the midspan of the structure.
+        """
         if self._maxMidspanRMS is None:
             self._maxMidspanRMS = max(self.midspanRMS)
         return self._maxMidspanRMS
@@ -72,6 +118,9 @@ class Results:
 
     # region Open and Save results
     def askSave(self):
+        """
+        Method to ask user if they want to save the results.
+        """
         # Check if user wants to save the results
         saveMessage = "Do you want to save the results?"
         saveChoices = ['Yes', 'No']
@@ -82,6 +131,10 @@ class Results:
             self.save()
 
     def save(self):
+        """
+        Method to save the results as an Excel file.
+        """
+
         # Get name to save workbook
         filenameMessage = "Enter a filename to save the results under"
         filenameDefault = f"{self.filename[15:-4]}_{self.abbr[self.modelType]}_{self.abbr[self.pedestrianModel]}"
@@ -115,8 +168,18 @@ class Results:
     @classmethod
     def open(cls, filename=None):
         """
+        Class method to open an Excel file and load results.
 
+        Parameters
+        ----------
+        filename: str
+            Name of file to open
+
+        Return
+        ------
+            an instance of Results class with the results loaded from the file
         """
+
         # Select file from file explorer
         if not filename:
             root = Tk()
@@ -143,31 +206,44 @@ class Results:
     # endregion
 
     def options(self):
+        """
+        Display options for processing the results.
+        """
         # Options for processing the results
-        choices = ['Finish viewing results',
-                   'Save results',
-                   'Print maxRMS at midspan',
-                   'Plot maxRMS at midspan',
-                   'Cancel']
-        question = [inquirer.List('next', message="How would you like to proceed?", choices=choices)]
+        optionsMessage = "How would you like to proceed?"
+        optionsChoices = [
+            'Print maxRMS at midspan',
+            'Plot maxRMS at midspan',
+            'Save results',
+            'Finish viewing results']
+        question = [inquirer.List('next', message=optionsMessage, choices=optionsChoices)]
         answer = inquirer.prompt(question)
 
         while answer['next'] != 'Finish viewing results':
-            if answer['next'] == 'Save results':
-                self.save()
-            elif answer['next'] == 'Print maxRMS at midspan':
+            if answer['next'] == 'Print maxRMS at midspan':
                 self.printMaxMidspanRMS()
             elif answer['next'] == 'Plot maxRMS at midspan':
                 self.plotMidspanAcceleration()
-            elif answer['next'] == 'Cancel':
-                sys.exit()
+            elif answer['next'] == 'Save results':
+                self.save()
             answer = inquirer.prompt(question)
 
     # region Process Results
     def printMaxMidspanRMS(self):
+        """
+        Print the maximum root mean square acceleration at midspan.
+        """
         print(f"Max RMS: {self.maxMidspanRMS:.6f} m/s^2\n")
 
     def plotMidspanAcceleration(self, title='Acceleration'):
+        """
+            Plot the acceleration and root mean square at midspan versus time.
+
+            Parameters
+            ----------
+            title : str, optional
+                Title of the plot. Defaults
+        """
         plt.figure(figsize=(9, 4))
 
         # creating the bar plot
@@ -181,11 +257,39 @@ class Results:
         plt.show()
 
     def calculateRMS(self, x):
+        """
+        Calculate the Root Mean Square of the acceleration at a specified location x.
+
+        Parameters
+        ----------
+        x : int
+            Location of the acceleration.
+
+        Returns
+        -------
+        float
+            The Root Mean Square of the acceleration at the specified location x.
+        """
         accelerationAtX = self.acceleration[:, x]
         rms = self.timeRMS(accelerationAtX)
         return rms
 
     def timeRMS(self, x, RMS_Window=1):
+        """
+            Calculate the time RMS of the signal.
+
+            Parameters
+            ----------
+            x : array_like
+                The input acceleration.
+            RMS_Window : int, optional
+                Window of time to use for RMS calculation. Defaults to 1.
+
+            Returns
+            -------
+            array_like
+                The time RMS of the input acceleration.
+            """
         # This function returns the tspan-rms of the signal
 
         n = len(x)

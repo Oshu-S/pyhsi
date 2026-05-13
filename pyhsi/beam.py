@@ -7,24 +7,77 @@ import numpy as np
 
 class Beam:
     """
-    Class definition
+    A class for representing a Beam object
+
+    Attributes
+    ----------
+    _numElements : int
+        Number of beam elements
+    length : int
+        Length of beam
+    width : int
+        Width of the beam
+    height : int
+        Height of the beam
+    E : Any
+        Young's modulus of the beam
+    modalDampingRatio : Any
+        Modal damping ratio of the beam
+    nHigh : Any
+        Higher mode for damping matrix
+    area : Any
+        Cross-section area of the beam
+    linearMass : Any
+        Linear mass of the beam
+    beamFreq : int
+        Beam frequency, given linear mass (Hz)
+
+    Methods
+    -------
+    __init__(self, numElements=10, length=50, width=2, height=0.6, E=200e9, nHigh=3, area=0.3162, linearMass=500)
+        Construct a Beam object with the specified attributes
+    elemLength(self) -> float
+        Returns the element length of the beam
+    I(self) -> float
+        Returns the second moment of area of the beam
+    EI(self)
+        Returns the flexural rigidity of the beam
+    nDOF(self)
+        Returns the number overall DOFs of the beam
+    nBDOF(self)
+        Returns the number of beam-only DOFs of the beam
+    RDOF(self)
+        Returns the restrained DOFs of the beam
+    numElements(self)
+        Returns the number of elements of the beam
     """
     # Class attributes
-    _numElements = 10  # n - Number of beam elements !not for modal
-    length = 50  # L - Length (m)
-    width = 2  # b - Width (m)
-    height = 0.6  # h - Height (m)
-    E = 200e9  # E - Young's modulus (N/m^2)
-    modalDampingRatio = 0.005  # xi - Modal damping ratio of the beam
-    nHigh = 3  # nHigh - Higher mode for damping matrix
-    area = 0.3162  # A - Cross-section area (m^2)
-    linearMass = 500  # m - Linear mass (kg/m)
+    # _numElements = 10           # numElements - Number of beam elements !not for modal
+    # length = 50                 # length - Length (m)
+    # width = 2                   # width - Width (m)
+    # height = 0.6                # height - Height (m)
+    # E = 200e9                   # E - Young's modulus (N/m^2)
+    # modalDampingRatio = 0.005   # modalDampingRatio - Modal damping ratio of the beam
+    # nHigh = 3                   # nHigh - Higher mode for damping matrix
+    # area = 0.3162               # area - Cross-section area (m^2)
+    # linearMass = 500            # linearMass - Linear mass (kg/m)
 
     beamFreq = 2  # f - Beam frequency, given linear mass (Hz)
 
-    def __init__(self, numElements, length, width, height, E, modalDampingRatio, nHigh, area, linearMass):
+    def __init__(
+        self,
+        numElements=10,             # numElements - Number of beam elements !not for modal
+        length=50,                  # length - Length (m)
+        width=2,                    # width - Width (m)
+        height=0.6,                 # height - Height (m)
+        E=200e9,                    # E - Young's modulus (N/m^2)
+        modalDampingRatio=0.005,    # modalDampingRatio - Modal damping ratio of the beam
+        nHigh=3,                    # nHigh - Higher mode for damping matrix
+        area=0.3162,                # area - Cross-section area (m^2)
+        linearMass=500              # linearMass - Linear mass (kg/m)
+    ):
         """
-        Constructs a beam object
+        Constructs a beam object with the specified attributes
 
         Parameters
         ----------
@@ -49,7 +102,7 @@ class Beam:
 
         Returns
         -------
-        None.
+        None
         """
 
         self._numElements = numElements
@@ -71,20 +124,44 @@ class Beam:
 
     # region Properties
     @property
-    def elemLength(self):
+    def elemLength(self) -> float:
+        """
+        Returns the element length
+
+        Returns
+        -------
+        elemLength : float
+            The element length
+        """
         if self._elemLength is None:
             self._elemLength = self.length / self.numElements
+
         return self._elemLength
 
     @property
-    def I(self):
-        # I - Second Moment of Area (m^4)
+    def I(self) -> float:
+        """
+             Return second moment area
+
+            Returns
+            -------
+            I : float
+             Second Moment of Area (m^4)
+        """
         if self._I is None:
             self._I = (self.width * self.height ** 3) / 12
         return self._I
 
     @property
     def EI(self):
+        """
+        Returns
+        -------
+        EI : float
+         The flexural rigidity
+
+        """
+
         # EI - Flexural Rigidity
         if self._EI is None:
             self._EI = self.linearMass * ((2 * math.pi * self.beamFreq) * (math.pi / self.length) ** (-2)) ** 2
@@ -92,28 +169,78 @@ class Beam:
 
     @property
     def nDOF(self):
+        """
+        The number of overall DOFs
+
+        Returns
+        -------
+        nDOF : int
+         Number of overall DOFs
+
+        """
+
         if self._nDOF is None:
             self._nDOF = 2 * (self.numElements + 1)
         return self._nDOF
 
     @property
     def nBDOF(self):
+        """
+        Returns the number of beam-only DOFs
+
+        Returns
+        -------
+        nBDOF : int
+         Beam only DOFs
+
+        """
+
         if self._nBDOF is None:
             self._nBDOF = 2 * (self.numElements + 1)
         return self._nBDOF
 
     @property
     def RDOF(self):
+        """
+        Returns the restrained DOFs
+
+        Returns
+        -------
+        RDOF : float
+         Restrained degree of freedom
+        """
+
         if self._RDOF is None:
             self._RDOF = [0, self.nDOF - 2]  # Should this be nDOF-1 so that the last column is used not 2nd last?
         return self._RDOF
 
     @property
     def numElements(self):
+        """
+        Returns number of elements
+
+        Return
+        ------
+        _numElements : int
+          Number of elements of beam
+        """
+
         return self._numElements
 
     @numElements.setter
     def numElements(self, numElements):
+        """
+        Sets even number of elements
+        Parameters
+        ----------
+        numElements : int
+            Number of elements of beam
+
+        Returns
+        -------
+        None
+
+        """
         if numElements % 2 != 0:
             numElements += 1
         self._numElements = numElements
@@ -121,6 +248,17 @@ class Beam:
     # endregion
 
     def beamElement(self):
+        """
+        Returns the elemental mass matrix and elemental stiffness matrix
+
+        Returns
+        -------
+        elementalMassMatrix : np.ndarray
+            Elemental mass matrix
+        elementalStiffnessMatrix : np.ndarray
+            Elemental stiffness matrix
+
+        """
         L = self.elemLength
 
         # Elemental mass matrix
@@ -138,6 +276,7 @@ class Beam:
         return elementalMassMatrix, elementalStiffnessMatrix
 
     def onBeam(self, x):
+
         # Checks if a location is on the beam
         if 0 <= x <= self.length:
             return True

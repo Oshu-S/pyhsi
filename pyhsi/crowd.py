@@ -22,14 +22,14 @@ class Pedestrian:
     synchedPace = 0
     synchedPhase = 0
 
-    def __init__(self, mass, damp, stiff, pace, phase, location, velocity, iSync):
+    def __init__(self, mass, damping, stiff, pace, phase, location, velocity, iSync):
         """
         this function introduce the properties when creating one pedestrian
 
         Parameters
         ----------
         mass: human mass
-        damp : damping effect of pedesteian
+        damping : damping effect of pedesteian
         stiff : stiffness of humans
         pace : pacing frequency
         phase : phase angle
@@ -43,7 +43,7 @@ class Pedestrian:
 
         """
         self.mass = mass
-        self.damp = damp
+        self.damping = damping
         self.stiff = stiff
         self.pace = pace
         self.phase = phase
@@ -215,17 +215,35 @@ class Pedestrian:
 
 class Crowd:
 
-    populationProperties = {}
+    populationProperties = {
+        'meanMass': 73.85,
+        'sdMass': 15.68,
+        'meanPace': 1.96,
+        'sdPace': 0.209,
+        'meanStride': 0.66,
+        'sdStride': 0.066,
+        'meanStiffness': 28000,
+        'sdStiffness': 2800,
+        'meanDamping': 0.3,
+        'sdDamping': 0.03,
+    }
     """
-    an empty dictionary is initialized to store population properties which will be introduced in the following 
-    lines of code.  
+    an empty dictionary is initialized to store population properties which will be introduced in the following lines of code.  
     """
 
-    def __init__(self, numPedestrians, length, width, sync):
+    def __init__(
+        self,
+        numPedestrians=100,
+        length=50,
+        width=1,
+        sync=0
+    ):
         """
         initialization takes arguments numPedestrians, length, width and sync. Then set the corresponding attributes
         """
-        # self.density = density
+
+        Pedestrian.setPopulationProperties(self.populationProperties)
+
         self.numPedestrians = numPedestrians
         self.length = length
         self.width = width
@@ -264,8 +282,7 @@ class Crowd:
     @classmethod
     def setPopulationProperties(cls, populationProperties):
         """
-        classmethod function is used so users can set their own population properties
-        and store it in the dictionary
+        classmethod function is used so users can set their own population properties and store it in the dictionary
         """
         cls.populationProperties = populationProperties
 
@@ -284,13 +301,11 @@ class SinglePedestrian(Pedestrian):
     """
     def __init__(self):
         """
-        super().__init__(parameters)
-            inherits the parameters from the Base class Pedestrian.
+        Initialize SinglePedestrian object with default parameters
 
-        reintroduce the parameters from Pedestrian Class which overrides the ones set under the parent class
-
-        introduce two other Parameters
-        numPedestrians
+        k: float
+        numPedestrian : int
+            Number of pedestrian
         """
         # TODO: Where should k come from
         k = 14.11e3
@@ -309,46 +324,101 @@ class SinglePedestrian(Pedestrian):
 
     @classmethod
     def fromDict(cls, crowdOptions):
+        """
+        Construct SinglePedestrian object from a dictionary.
+
+        Parameters
+        ----------
+        crowdOptions: dict
+
+        Returns
+        -------
+        SinglePedestrian
+        """
         return cls()
 
 
 class DeterministicCrowd(Crowd):
+    """
+    Deterministic crowd object
+    """
 
     arrivalGap = 1      # HSI Paper Section 5.4
 
     def __init__(self, numPedestrians, length, width, sync):
+        """
+        Initialize DeterministicCrowd object.
+
+        Parameters
+        ----------
+        numPedestrians: int
+        length: float
+        width: float
+        sync: bool
+        """
         super().__init__(numPedestrians, length, width, sync)
         self.generateLocations()
         self.populateCrowd()
 
     def generateLocations(self):
+        """
+        Generate pedestrian arrival times.
+        """
         self.locations = -self.arrivalGap*np.array(range(self.numPedestrians))
 
     def populateCrowd(self):
+        """
+        Add pedestrians to the crowd object.
+        """
         for i in range(self.numPedestrians):
             self.addDeterministicPedestrian(self.locations[i], self.iSync[i])
 
     @classmethod
     def setArrivalGap(cls, arrivalGap):
+        """
+        Set arrivalGap class variable.
+        """
         cls.arrivalGap = arrivalGap
 
 
 class RandomCrowd(Crowd):
+    """
+    Random crowd object
+    """
     def __init__(self, numPedestrians, length, width, sync):
+        """
+        Initialize RandomCrowd object.
+
+        Parameters
+        ----------
+        numPedestrians: int
+        length: float
+        width: float
+        sync: bool
+        """
         super().__init__(numPedestrians, length, width, sync)
         self.generateLocations()
         self.populateCrowd()
 
     def generateLocations(self):
+        """
+        Generate pedestrian arrival times.
+        """
         gaps = np.random.exponential(1 / self.lamda, size=self.numPedestrians)
         self.locations = np.cumsum(gaps, axis=None, dtype=None, out=None)
 
     def populateCrowd(self):
+        """
+        Add pedestrians to the crowd object.
+        """
         for i in range(self.numPedestrians):
             self.addRandomPedestrian(self.locations[i], self.iSync[i])
 
 
 def getPopulationProperties():
+    """
+    Return population properties as a dictionary.
+    """
     populationProperties = {}
 
     with open('../simulations/defaults/DefaultPopulationProperties.csv', newline='') as csvFile:
@@ -360,27 +430,84 @@ def getPopulationProperties():
 
 
 def updatePopulationProperties(populationProperties):
+    """
+    Update population properties.
+    """
     Pedestrian.setPopulationProperties(populationProperties)
     Crowd.setPopulationProperties(populationProperties)
 
 
 class ExactCrowd(Crowd):
-
+    """
+    A subclass of Crowd that generates pedestrian locations and populates the crowd using exact pedestrian models.
+    """
     arrivalGap = 1      # HSI Paper Section 5.4
 
     def __init__(self, numPedestrians, length, width, sync):
+        """
+        Initializes an instance of the ExactCrowd class.
+
+        Parameters
+        ----------
+        numPedestrians :int
+            The number of pedestrians in the crowd.
+        length : float
+            The length of the crowd.
+        width : float
+            The width of the crowd.
+        sync : bool
+            Whether the pedestrians are synchronized.
+
+        Returns
+        -------
+            None
+        """
         super().__init__(numPedestrians, length, width, sync)
         self.generateLocations()
         self.populateCrowd()
 
     def generateLocations(self):
+        """
+        Generates the pedestrian locations.
+
+        Parameter
+        --------
+            None
+
+        Returns
+        -------
+            None
+        """
         self.locations = -self.arrivalGap*np.array(range(self.numPedestrians))
 
     def populateCrowd(self):
+        """
+        Populates the crowd with exact pedestrian models.
+
+        Parameters
+        ----------
+            None
+
+        Returns
+        -------
+            None
+        """
         for i in range(self.numPedestrians):
             self.addExactPedestrian(self.locations[i], self.iSync[i])
 
     @classmethod
     def setArrivalGap(cls, arrivalGap):
+        """
+        Sets the arrival gap for the crowd.
+
+        Parameters
+        ----------
+            arrivalGap : float
+                The arrival gap for the crowd.
+
+        Returns
+        -------
+            None
+        """
         cls.arrivalGap = arrivalGap
 
